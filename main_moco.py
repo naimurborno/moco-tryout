@@ -15,8 +15,8 @@ import shutil
 import time
 import warnings
 
-import deeplearning.cross_image_ssl.moco.builder
-import deeplearning.cross_image_ssl.moco.loader
+import moco.builder
+import moco.loader
 import torch
 import torch.backends.cudnn as cudnn
 import torch.distributed as dist
@@ -204,16 +204,16 @@ def main() -> None:
     args.distributed = args.world_size > 1 or args.multiprocessing_distributed
 
     ngpus_per_node = torch.cuda.device_count()
-    if args.multiprocessing_distributed:
-        # Since we have ngpus_per_node processes per node, the total world_size
-        # needs to be adjusted accordingly
-        args.world_size = ngpus_per_node * args.world_size
-        # Use torch.multiprocessing.spawn to launch distributed processes: the
-        # main_worker process function
-        mp.spawn(main_worker, nprocs=ngpus_per_node, args=(ngpus_per_node, args))
-    else:
+    # if args.multiprocessing_distributed:
+    #     # Since we have ngpus_per_node processes per node, the total world_size
+    #     # needs to be adjusted accordingly
+    #     args.world_size = ngpus_per_node * args.world_size
+    #     # Use torch.multiprocessing.spawn to launch distributed processes: the
+    #     # main_worker process function
+    #     mp.spawn(0, nprocs=ngpus_per_node, args=(ngpus_per_node, args))
+    # else:
         # Simply call main_worker function
-        main_worker(args.gpu, ngpus_per_node, args)
+    main_worker(args.gpu, ngpus_per_node, args)
 
 
 def main_worker(gpu, ngpus_per_node, args):
@@ -245,7 +245,7 @@ def main_worker(gpu, ngpus_per_node, args):
         )
     # create model
     print("=> creating model '{}'".format(args.arch))
-    model = deeplearning.cross_image_ssl.moco.builder.MoCo(
+    model = moco.builder.MoCo(
         models.__dict__[args.arch],
         args.moco_dim,
         args.moco_k,
@@ -319,7 +319,7 @@ def main_worker(gpu, ngpus_per_node, args):
     cudnn.benchmark = True
 
     # Data loading code
-    traindir = os.path.join(args.data, "train")
+    traindir = '/content/drive/MyDrive/BRaTS_2021_Dataset/train'
     normalize = transforms.Normalize(
         mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225]
     )
@@ -333,7 +333,7 @@ def main_worker(gpu, ngpus_per_node, args):
             ),
             transforms.RandomGrayscale(p=0.2),
             transforms.RandomApply(
-                [deeplearning.cross_image_ssl.moco.loader.GaussianBlur([0.1, 2.0])],
+                [moco.loader.GaussianBlur([0.1, 2.0])],
                 p=0.5,
             ),
             transforms.RandomHorizontalFlip(),
@@ -353,7 +353,7 @@ def main_worker(gpu, ngpus_per_node, args):
 
     train_dataset = datasets.ImageFolder(
         traindir,
-        deeplearning.cross_image_ssl.moco.loader.TwoCropsTransform(
+        moco.loader.TwoCropsTransform(
             transforms.Compose(augmentation)
         ),
     )
@@ -516,7 +516,7 @@ def accuracy(output, target, topk=(1,)):
 
         res = []
         for k in topk:
-            correct_k = correct[:k].view(-1).float().sum(0, keepdim=True)
+            correct_k = correct[:k].reshape(-1).float().sum(0, keepdim=True)
             res.append(correct_k.mul_(100.0 / batch_size))
         return res
 
